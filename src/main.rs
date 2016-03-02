@@ -191,6 +191,7 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                     dm_sender_name.pop();
                     my_string = dm_sender_name + &" send you a direct messsage : ".to_string() + &my_string;
                     frd_stream.write(my_string.clone().as_bytes());
+                    continue ;
                 }
                 stream_loop2.write("Wrong friend name ! \n".as_bytes());
             }
