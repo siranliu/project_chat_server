@@ -215,23 +215,29 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
         }
         else if (vec[0] == 'J'){
             let group_chat3 = group_chat.clone();
-            let vec = group_chat3.lock().unwrap().get_chatroom_list();
-            if vec.len() == 0 {
+            let set = group_chat3.lock().unwrap().get_chatroom_list();
+            if set.len() == 0 {
                 stream_loop2.write("There are no live chatrooms\n".as_bytes());
                 continue;
             }
-            for x in vec {
+            for x in set.iter() {
                 stream_loop2.write(x.as_bytes());
             }
             stream_loop2.write("please enther chatroom name:".as_bytes());
             let mut my_string = String :: new() ;
             read_method.read_line(&mut my_string) ;
-            let group_chat = group_chat.clone();
-            join_group_chat(stream_loop2 , my_string.clone() , group_chat , name.clone());
-            let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
-            stream_loop3.write(chat_reminder.as_bytes());
-            break;
 
+            if set.contains(&my_string.clone()) {
+
+                let group_chat = group_chat.clone();
+                join_group_chat(stream_loop2 , my_string.clone() , group_chat , name.clone());
+                let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
+                stream_loop3.write(chat_reminder.as_bytes());
+                break;
+            }
+            else {
+                stream_loop2.write("Wrong chatroom name! \n".as_bytes());
+            }
         }
         else{
             stream_loop2.write("please enter valid response\n".as_bytes());
@@ -476,12 +482,12 @@ impl Group_chat {
         self.map.get(&name).unwrap().list_sender.clone() 
     }
 
-    fn get_chatroom_list(&mut self) -> Vec<String>{
-        let mut vec : Vec<String> = Vec :: new() ;
+    fn get_chatroom_list(&mut self) -> HashSet<String>{
+        let mut set : HashSet<String> = HashSet :: new() ;
         for key in self.map.keys(){
-            vec.push(key.clone());
+            set.insert(key.clone());
         }
-        return vec ;
+        return set ;
     }
 
 
