@@ -11,7 +11,6 @@ use std::sync::mpsc::{sync_channel, SyncSender  , Receiver};
 use std::fs::File;
 use std::fs::OpenOptions;
 
-blablabla
 
 extern crate chan;
 
@@ -64,22 +63,18 @@ fn login(mut stream : TcpStream , group_chat : Arc<Mutex<Group_chat>> , users : 
                 flag = users.lock().unwrap().contains_user(name.clone());
             }
             if flag {
-                println!("contains name");
                 let mut password2 = String :: new() ;
                 {
                     password2 = users.lock().unwrap().get_password(name.clone());
                 }
                 if password2 == password{
-                    println!("correct user info");
                     let group_chat2 = group_chat.clone();
                     user_loop(stream_loop2 , group_chat2 , name.clone());
                     break ;
                 }
                 else{
-                    println!("test");
                     stream_loop2.write("incorrect password \n".as_bytes());
                 }
-                println!("ended" );
             }
             else{
                 stream_loop2.write("no such user exists ! \n".as_bytes());
