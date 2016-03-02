@@ -10,7 +10,7 @@ use std::sync::mpsc::channel;
 use std::sync::mpsc::{sync_channel, SyncSender  , Receiver};
 use std::fs::File;
 use std::fs::OpenOptions;
-
+use std::collections::HashSet;
 
 extern crate chan;
 
@@ -21,14 +21,21 @@ fn main() {
     let users = Arc :: new(Mutex::new(users));
     let group_chat = Arc :: new(Mutex::new(group_chat));
 
+<<<<<<< HEAD
+=======
+    let mut online_users = HashSet::new();
+    let online_users = Arc :: new(Mutex::new(online_users));
+
+>>>>>>> origin/master
 
     for stream in listener.incoming() {
         let group_chat = group_chat.clone() ;
         let users = users.clone();
+        let online_users = online_users.clone();
         match stream {
 	        Ok(stream) => {
                 thread::spawn(move|| {
-                    login(stream , group_chat , users);
+                    login(stream , group_chat , users, online_users);
 	            });
 	        }
 	        Err(e) => {}
@@ -36,7 +43,9 @@ fn main() {
 	} 
 }
 
-fn login(mut stream : TcpStream , group_chat : Arc<Mutex<Group_chat>> , users : Arc<Mutex<User_info_map>>){
+fn login(mut stream : TcpStream , group_chat : Arc<Mutex<Group_chat>> , users : Arc<Mutex<User_info_map>>, 
+        online_users : Arc<Mutex<HashSet<String>>>) {
+
     let mut stream_loop = stream.try_clone().unwrap() ;
     let mut stream_loop2 = stream.try_clone().unwrap() ;
     let mut read_method = BufReader::new(stream) ;
@@ -70,7 +79,7 @@ fn login(mut stream : TcpStream , group_chat : Arc<Mutex<Group_chat>> , users : 
                 }
                 if password2 == password{
                     let group_chat2 = group_chat.clone();
-                    user_loop(stream_loop2 , group_chat2 , name.clone());
+                    user_loop(stream_loop2 , group_chat2 , name.clone(), online_users);
                     break ;
                 }
                 else{
@@ -105,8 +114,21 @@ fn login(mut stream : TcpStream , group_chat : Arc<Mutex<Group_chat>> , users : 
 
 }
 
-fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , name : String ){
+fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , name : String, online_users : Arc<Mutex<HashSet<String>>> ){
     let mut stream = stream.try_clone().unwrap();
+
+    {
+    online_users.lock().unwrap().insert(name.clone());
+
+    }
+
+    {
+      for x in online_users.lock().unwrap().iter() {
+        println!("{}", x);
+    }
+    }      
+
+
     loop{
         let mut stream_loop = stream.try_clone().unwrap();
         let mut stream_loop2 = stream.try_clone().unwrap();
