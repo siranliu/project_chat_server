@@ -21,6 +21,7 @@ fn main() {
     let users = Arc :: new(Mutex::new(users));
     let group_chat = Arc :: new(Mutex::new(group_chat));
 
+
     for stream in listener.incoming() {
         let group_chat = group_chat.clone() ;
         let users = users.clone();
@@ -288,6 +289,36 @@ impl User_info_map{
         writer.write(password.as_bytes());
         let temp = User_info{name : name.clone() , password : password.clone() , friend_list : Vec::new()} ;
         self.map.insert(name , temp);
+    }
+    fn add_friend(&mut self , name : String , friend : String){
+        let mut options = OpenOptions::new();
+        options.write(true).append(true);
+        let file = match options.open("User_info.txt") {
+                    Ok(file) => file,
+                    Err(..) => panic!("wth"),
+        };
+        let mut writer = BufWriter::new(&file);
+        writer.write("////////".to_string().as_bytes());
+        writer.write(name.as_bytes());
+        writer.write(" ".to_string().as_bytes());
+        writer.write(self.map.get(&name).unwrap().password.clone().as_bytes());
+        for x in 0..self.map.get(&name).unwrap().friend_list.len(){
+            writer.write(" ".to_string().as_bytes());
+            writer.write(self.map.get(&name).unwrap().friend_list[x].clone().as_bytes());
+        }
+        writer.write(" ".to_string().as_bytes());
+        writer.write(friend.as_bytes());
+        self.map.get_mut(&name).unwrap().friend_list.push(friend);
+
+
+    }
+
+    fn get_friend_list(&mut self , name : String) ->Vec<String>{
+        let mut vec : Vec<String> = Vec :: new() ;
+        for x in 0..self.map.get_mut(&name).unwrap().friend_list.len(){
+            vec.push(self.map.get(&name).unwrap().friend_list[x].clone())
+        }
+        return vec ;
     }
 }
 
