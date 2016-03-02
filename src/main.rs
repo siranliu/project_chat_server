@@ -179,11 +179,11 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
 
                 let mut my_string = String :: new() ;
                 read_method.read_line(&mut my_string) ;
+                let mut dm_sender_name = name.clone();
+                dm_sender_name.pop();
+                dm_sender_name.pop();
+                my_string = dm_sender_name + &" send you a direct messsage : ".to_string() + &my_string;
                 frd_stream.write(my_string.clone().as_bytes());
-
-
-
-
 
             }
 
@@ -299,7 +299,7 @@ fn create_chatroom(group_chat : Arc<Mutex<Group_chat>> , name : String) {
 struct User_info{
     name : String ,
     password : String,
-    friend_list : Vec<String>,
+    friend_list : HashSet<String>,
 
 }
 
@@ -317,13 +317,13 @@ impl User_info_map{
         for temp in split {
             let mut split2 = temp.split(" ");
             let vec: Vec<&str> = split2.collect() ;
-            let mut vec_frds : Vec<String> = Vec :: new() ;
+            let mut set_frds : HashSet<String> = HashSet :: new() ;
             if vec.len() > 2 {
                 for x in 2..vec.len(){
-                    vec_frds.push(vec[x].to_string().clone());
+                    set_frds.insert(vec[x].to_string().clone());
                 }
             }
-            let mut user = User_info{name:vec[0].to_string().clone() , password : vec[1].to_string().clone() , friend_list:vec_frds};
+            let mut user = User_info{name:vec[0].to_string().clone() , password : vec[1].to_string().clone() , friend_list:set_frds};
             map.insert(vec[0].to_string().clone() , user);
         }
         User_info_map{
@@ -360,7 +360,7 @@ impl User_info_map{
         writer.write(name.as_bytes());
         writer.write(" ".to_string().as_bytes());
         writer.write(password.as_bytes());
-        let temp = User_info{name : name.clone() , password : password.clone() , friend_list : Vec::new()} ;
+        let temp = User_info{name : name.clone() , password : password.clone() , friend_list : HashSet::new()} ;
         self.map.insert(name , temp);
     }
     fn add_friend(&mut self , name : String , friend : String){
@@ -375,22 +375,26 @@ impl User_info_map{
         writer.write(name.as_bytes());
         writer.write(" ".to_string().as_bytes());
         writer.write(self.map.get(&name).unwrap().password.clone().as_bytes());
-        for x in 0..self.map.get(&name).unwrap().friend_list.len(){
+
+        for x in self.map.get(&name).unwrap().friend_list.iter() {
             writer.write(" ".to_string().as_bytes());
-            writer.write(self.map.get(&name).unwrap().friend_list[x].clone().as_bytes());
+            writer.write(x.clone().as_bytes());
         }
         writer.write(" ".to_string().as_bytes());
         writer.write(friend.as_bytes());
-        self.map.get_mut(&name).unwrap().friend_list.push(friend);
+        self.map.get_mut(&name).unwrap().friend_list.insert(friend);
 
 
     }
 
     fn get_friend_list(&mut self , name : String) ->Vec<String>{
+        let mut set : HashSet<String> = HashSet::new();
         let mut vec : Vec<String> = Vec :: new() ;
-        for x in 0..self.map.get_mut(&name).unwrap().friend_list.len(){
-            vec.push(self.map.get(&name).unwrap().friend_list[x].clone())
+
+        for x in self.map.get(&name).unwrap().friend_list.iter() {
+            vec.push(x.clone());
         }
+
         return vec ;
     }
 }
