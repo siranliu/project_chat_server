@@ -1,3 +1,4 @@
+
 use std::net::{TcpListener};
 use std::collections::HashMap;
 use std::io::{BufReader,BufWriter};
@@ -169,16 +170,28 @@ fn join_group_chat (mut stream : TcpStream , name : String , group_chat :Arc<Mut
     handle_client( stream , sender , unique_r , user_name.clone());
 }
 
-fn handle_client(mut stream : TcpStream ,sender : chan :: Sender<String> , receiver : chan :: Receiver<String> , name : String) {
+fn handle_client(mut stream : TcpStream ,sender : chan :: Sender<String> , receiver : chan :: Receiver<String> , mut name : String) {
         let mut clone_stream = stream.try_clone().unwrap() ;
         let mut clone_stream2 = stream.try_clone().unwrap() ;
         let sender = sender.clone() ;
         let receiver = receiver.clone() ;
 
+        name.pop();
+        name.pop();
+
+        let mut name_2 = name.clone();
 
         thread:: spawn(move || {
             loop{
-                clone_stream.write(receiver.recv().unwrap().as_bytes());
+
+                let rec_message = receiver.recv().unwrap();
+                let mut rec_message_temp = rec_message.clone();
+
+                rec_message_temp.truncate(name.len());
+
+                if  rec_message_temp != name.clone() {                    
+                        clone_stream.write(rec_message.as_bytes());
+                }
             }
         });
 
@@ -186,6 +199,7 @@ fn handle_client(mut stream : TcpStream ,sender : chan :: Sender<String> , recei
             loop {
                 let mut read_method = BufReader::new(&clone_stream2) ;
                 let mut my_string = String :: new() ;
+                my_string = name_2.clone() + ":"+ &my_string;
                 read_method.read_line(&mut my_string) ;
                 sender.send(my_string); 
             }
