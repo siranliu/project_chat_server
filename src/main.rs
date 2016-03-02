@@ -225,6 +225,7 @@ fn create_chatroom(group_chat : Arc<Mutex<Group_chat>> , name : String) {
 struct User_info{
     name : String ,
     password : String,
+    friend_list : Vec<String>,
 
 }
 
@@ -242,7 +243,13 @@ impl User_info_map{
         for temp in split {
             let mut split2 = temp.split(" ");
             let vec: Vec<&str> = split2.collect() ;
-            let mut user = User_info{name:vec[0].to_string().clone() , password : vec[1].to_string().clone()};
+            let mut vec_frds : Vec<String> = Vec :: new() ;
+            if vec.len() > 2 {
+                for x in 2..vec.len(){
+                    vec_frds.push(vec[x].to_string().clone());
+                }
+            }
+            let mut user = User_info{name:vec[0].to_string().clone() , password : vec[1].to_string().clone() , friend_list:vec_frds};
             map.insert(vec[0].to_string().clone() , user);
         }
         User_info_map{
@@ -279,7 +286,7 @@ impl User_info_map{
         writer.write(name.as_bytes());
         writer.write(" ".to_string().as_bytes());
         writer.write(password.as_bytes());
-        let temp = User_info{name : name.clone() , password : password.clone()};
+        let temp = User_info{name : name.clone() , password : password.clone() , friend_list : Vec::new()} ;
         self.map.insert(name , temp);
     }
 }
