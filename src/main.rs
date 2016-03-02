@@ -198,7 +198,7 @@ fn handle_client(mut stream : TcpStream ,sender : chan :: Sender<String> , recei
             loop {
                 let mut read_method = BufReader::new(&clone_stream2) ;
                 let mut my_string = String :: new() ;
-                my_string = name_2.clone() + " :"+ &my_string;
+                my_string = name_2.clone() + " : "+ &my_string;
                 read_method.read_line(&mut my_string) ;
                 sender.send(my_string); 
             }
