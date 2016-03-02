@@ -58,11 +58,11 @@ fn login(mut stream : TcpStream , group_chat : Arc<Mutex<Group_chat>> , users : 
         }
         if vec[0] == 'Y'{
 
-            stream_loop2.write("please enter your user name : ".as_bytes());
+            stream_loop2.write("Please enter your user name : ".as_bytes());
             let mut my_string = String :: new() ;
             read_method.read_line(&mut my_string);
             let name = my_string.clone();
-            stream_loop2.write("please enter your password : ".as_bytes());
+            stream_loop2.write("Please enter your password : ".as_bytes());
             let mut my_string = String :: new() ;
             read_method.read_line(&mut my_string);
             let password = my_string.clone();
@@ -90,11 +90,11 @@ fn login(mut stream : TcpStream , group_chat : Arc<Mutex<Group_chat>> , users : 
             
         }
         else if vec[0] == 'N'{
-            stream_loop2.write("please enter your user name : ".as_bytes());
+            stream_loop2.write("Please enter your user name : ".as_bytes());
             let mut my_string = String :: new() ;
             read_method.read_line(&mut my_string);
             let name = my_string.clone();
-            stream_loop2.write("please enter your password : ".as_bytes());
+            stream_loop2.write("Please enter your password : ".as_bytes());
             let mut my_string = String :: new() ;
             read_method.read_line(&mut my_string);
             let password = my_string.clone();
@@ -125,6 +125,7 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
     loop{
         let mut stream_loop = stream.try_clone().unwrap();
         let mut stream_loop2 = stream.try_clone().unwrap();
+        let mut stream_loop3 = stream_loop2.try_clone().unwrap();
         stream_loop.write("Enter F to chat with friend or A to add new friend\nEnter J for Join or C for Create chat rooms : \n".as_bytes());
         let mut read_method = BufReader::new(stream_loop) ;
         let mut my_string = String :: new() ;
@@ -193,12 +194,15 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
         else if(vec[0] == 'C'){
             {
                 stream_loop2.write("please enter chatroom name:".as_bytes());
+
                 let mut my_string = String :: new() ;
                 read_method.read_line(&mut my_string) ;
                 let group_chat1 = group_chat.clone();  
                 create_chatroom(group_chat1 , my_string.clone());
                 let group_chat2 = group_chat.clone();
                 join_group_chat(stream_loop2 , my_string.clone() , group_chat2 , name.clone());
+                let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
+                stream_loop3.write(chat_reminder.as_bytes());
                 break;
             }   
         }
@@ -217,6 +221,8 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
             read_method.read_line(&mut my_string) ;
             let group_chat = group_chat.clone();
             join_group_chat(stream_loop2 , my_string.clone() , group_chat , name.clone());
+            let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
+            stream_loop3.write(chat_reminder.as_bytes());
             break;
 
         }
