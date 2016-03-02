@@ -153,14 +153,14 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
         }
         else if (vec[0] == 'F'){
             let vec = users.lock().unwrap().get_friend_list(name.clone());
-            let mut temp : Vec<String> = Vec :: new() ;
+            let mut temp : HashSet<String> = HashSet :: new() ;
             for x in 0..vec.len(){
                 let mut flag = false ;
                 {
                     flag = online_users.lock().unwrap().contains_key(&vec[x].clone());
                 }
                 if flag{
-                    temp.push(vec[x].clone());
+                    temp.insert(vec[x].clone());
                 }
 
             }
@@ -169,23 +169,30 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
             }
             else{
                 stream_loop2.write("Here is your online friends list : \n".as_bytes());
-                for x in 0..temp.len(){
+            /*    for x in 0..temp.len(){
                     stream_loop2.write(temp[x].clone().as_bytes());
+                }*/
+
+                for x in temp.iter() {
+                    stream_loop2.write(x.clone().as_bytes());
                 }
+
                 stream_loop2.write("Enter a friends name : ".as_bytes());
                 let mut my_string = String :: new() ;
                 read_method.read_line(&mut my_string) ;
 
-                let mut frd_stream = online_users.lock().unwrap().get_mut(&my_string).unwrap().try_clone().unwrap();
-
-                let mut my_string = String :: new() ;
-                read_method.read_line(&mut my_string) ;
-                let mut dm_sender_name = name.clone();
-                dm_sender_name.pop();
-                dm_sender_name.pop();
-                my_string = dm_sender_name + &" send you a direct messsage : ".to_string() + &my_string;
-                frd_stream.write(my_string.clone().as_bytes());
-
+                if temp.contains(&my_string.clone()) {
+       
+                    let mut frd_stream = online_users.lock().unwrap().get_mut(&my_string).unwrap().try_clone().unwrap();
+                    let mut my_string = String :: new() ;
+                    read_method.read_line(&mut my_string) ;
+                    let mut dm_sender_name = name.clone();
+                    dm_sender_name.pop();
+                    dm_sender_name.pop();
+                    my_string = dm_sender_name + &" send you a direct messsage : ".to_string() + &my_string;
+                    frd_stream.write(my_string.clone().as_bytes());
+                }
+                stream_loop2.write("Wrong friend name ! \n".as_bytes());
             }
 
 
