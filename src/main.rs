@@ -11,7 +11,6 @@ use std::sync::mpsc::{sync_channel, SyncSender  , Receiver};
 use std::fs::File;
 use std::fs::OpenOptions;
 
-blablabla
 
 extern crate chan;
 
