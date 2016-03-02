@@ -21,12 +21,10 @@ fn main() {
     let users = Arc :: new(Mutex::new(users));
     let group_chat = Arc :: new(Mutex::new(group_chat));
 
-<<<<<<< HEAD
-=======
+
     let mut online_users = HashSet::new();
     let online_users = Arc :: new(Mutex::new(online_users));
 
->>>>>>> origin/master
 
     for stream in listener.incoming() {
         let group_chat = group_chat.clone() ;
@@ -79,7 +77,7 @@ fn login(mut stream : TcpStream , group_chat : Arc<Mutex<Group_chat>> , users : 
                 }
                 if password2 == password{
                     let group_chat2 = group_chat.clone();
-                    user_loop(stream_loop2 , group_chat2 , name.clone(), online_users);
+                    user_loop(stream_loop2 , group_chat2 , name.clone(), online_users , users);
                     break ;
                 }
                 else{
@@ -114,7 +112,8 @@ fn login(mut stream : TcpStream , group_chat : Arc<Mutex<Group_chat>> , users : 
 
 }
 
-fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , name : String, online_users : Arc<Mutex<HashSet<String>>> ){
+fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , name : String, 
+             online_users : Arc<Mutex<HashSet<String>>>  , users : Arc<Mutex<User_info_map>> ){
     let mut stream = stream.try_clone().unwrap();
 
     {
@@ -122,17 +121,10 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
 
     }
 
-    {
-      for x in online_users.lock().unwrap().iter() {
-        println!("{}", x);
-    }
-    }      
-
-
     loop{
         let mut stream_loop = stream.try_clone().unwrap();
         let mut stream_loop2 = stream.try_clone().unwrap();
-        stream_loop.write("Join or Creat group chat? Enter J for Join or C for Create : ".as_bytes());
+        stream_loop.write("Enter F to chat with friend or A to add new friend\nEnter J for Join or C for Create chat rooms : ".as_bytes());
         let mut read_method = BufReader::new(stream_loop) ;
         let mut my_string = String :: new() ;
         read_method.read_line(&mut my_string) ;
@@ -140,7 +132,24 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
         for x in my_string.clone().chars() {
             vec.push(x);
         }
-        if(vec[0] == 'C'){
+        if(vec[0] == 'A'){
+            stream_loop2.write("please enter your friends user name : ".as_bytes());
+            let mut my_string = String :: new() ;
+            read_method.read_line(&mut my_string) ;
+            let mut flag = false;
+            {
+                flag = users.lock().unwrap().contains_user(name.clone());
+            }
+            if flag{
+                users.lock().unwrap().add_friend(name.clone() , my_string.clone());
+            }
+            else{
+                stream_loop2.write("no such user id\n".as_bytes());
+            }
+
+
+        }
+        else if(vec[0] == 'C'){
             {
                 stream_loop2.write("please enter chatroom name:".as_bytes());
                 let mut my_string = String :: new() ;
