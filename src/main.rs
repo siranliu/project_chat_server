@@ -130,141 +130,291 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
         let mut read_method = BufReader::new(stream_loop) ;
         let mut my_string = String :: new() ;
         read_method.read_line(&mut my_string) ;
-        let mut vec : Vec<char> = Vec :: new() ;
-        for x in my_string.clone().chars() {
-            vec.push(x);
-        }
-        if(vec[0] == 'A'){
-            stream_loop2.write("please enter your friends user name : ".as_bytes());
-            let mut my_string = String :: new() ;
-            read_method.read_line(&mut my_string) ;
-            let mut flag = false;
-            {
-                flag = users.lock().unwrap().contains_user(name.clone());
-            }
-            if flag{
-                users.lock().unwrap().add_friend(name.clone() , my_string.clone());
-            }
-            else{
-                stream_loop2.write("no such user id\n".as_bytes());
-            }
-
-
-        }
-        else if (vec[0] == 'F'){
-            let vec = users.lock().unwrap().get_friend_list(name.clone());
-            let mut temp : HashSet<String> = HashSet :: new() ;
-            for x in 0..vec.len(){
-                let mut flag = false ;
-                {
-                    flag = online_users.lock().unwrap().contains_key(&vec[x].clone());
+        my_string.pop();
+        my_string.pop();
+        if my_string == "Yes".to_string(){
+            stream_loop2.write("you are now in private chat enter start to begin chat. \n".as_bytes());
+            loop {
+                if users.lock().unwrap().get_busy(name.clone())==false {
+                    break ;
                 }
-                if flag{
-                    temp.insert(vec[x].clone());
-                }
-
             }
-            if temp.len() == 0 {
-                stream_loop2.write("no friends online bohooooo\n".as_bytes());
-            }
-            else{
-                stream_loop2.write("Here is your online friends list : \n".as_bytes());
-            /*    for x in 0..temp.len(){
-                    stream_loop2.write(temp[x].clone().as_bytes());
-                }*/
-
-                for x in temp.iter() {
-                    stream_loop2.write(x.clone().as_bytes());
-                }
-
-                stream_loop2.write("Enter a friends name : ".as_bytes());
-                let mut my_string = String :: new() ;
-                read_method.read_line(&mut my_string) ;
-
-                if temp.contains(&my_string.clone()) {
-       
-                    let mut frd_stream = online_users.lock().unwrap().get_mut(&my_string).unwrap().try_clone().unwrap();
-                    let mut my_string = String :: new() ;
-                    read_method.read_line(&mut my_string) ;
-                    let mut dm_sender_name = name.clone();
-                    dm_sender_name.pop();
-                    dm_sender_name.pop();
-                    my_string = dm_sender_name + &" send you a direct messsage : ".to_string() + &my_string;
-                    frd_stream.write(my_string.clone().as_bytes());
-                    continue ;
-                }
-                stream_loop2.write("Wrong friend name ! \n".as_bytes());
-            }
-
-
-
+            continue ;
         }
-        else if(vec[0] == 'C'){
-            {
-                stream_loop2.write("please enter chatroom name:".as_bytes());
-
-                let mut my_string = String :: new() ;
-                read_method.read_line(&mut my_string) ;
-                let group_chat1 = group_chat.clone();  
-                create_chatroom(group_chat1 , my_string.clone());
-                let group_chat2 = group_chat.clone();
-
-                let mut quit_flag = Quit_flag::new() ;
-                let quit_flag = Arc :: new(Mutex::new(quit_flag));
-                let quit_flag2 = quit_flag.clone();
-
-
-                join_group_chat(stream_loop2 , my_string.clone() , group_chat2 , name.clone() , quit_flag2);
-                let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
-                stream_loop3.write(chat_reminder.as_bytes());
-                while quit_flag.lock().unwrap().get() == false{}
-                continue ;
-            }   
-        }
-        else if (vec[0] == 'J'){
-            let group_chat3 = group_chat.clone();
-            let set = group_chat3.lock().unwrap().get_chatroom_list();
-            if set.len() == 0 {
-                stream_loop2.write("There are no live chatrooms\n".as_bytes());
-                continue;
+        else if my_string == "No".to_string(){
+            stream_loop2.write("Decline chat request? (Y/N) \n".as_bytes());
+            loop {
+                if users.lock().unwrap().get_busy(name.clone())==false {
+                    break ;
+                }
             }
-            for x in set.iter() {
-                stream_loop2.write(x.as_bytes());
-            }
-            stream_loop2.write("please enther chatroom name:".as_bytes());
-            let mut my_string = String :: new() ;
-            read_method.read_line(&mut my_string) ;
 
-            if set.contains(&my_string.clone()) {
-
-                let group_chat = group_chat.clone();
-
-                let mut quit_flag = Quit_flag::new() ;
-                let quit_flag = Arc :: new(Mutex::new(quit_flag));
-                let quit_flag2 = quit_flag.clone();
-
-
-                join_group_chat(stream_loop2 , my_string.clone() , group_chat , name.clone() , quit_flag2);
-                let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
-                stream_loop3.write(chat_reminder.as_bytes());
-                while quit_flag.lock().unwrap().get() == false{}
-                continue ;
-            }
-            else {
-                stream_loop2.write("Wrong chatroom name! \n".as_bytes());
-            }
+            continue ;
         }
         else{
-            stream_loop2.write("please enter valid response\n".as_bytes());
-            continue;
+            {
+                users.lock().unwrap().set_busy_true(name.clone()) ;
+            }
+            let mut vec : Vec<char> = Vec :: new() ;
+            for x in my_string.clone().chars() {
+                vec.push(x);
+            }
+            if(vec[0] == 'A'){
+                stream_loop2.write("please enter your friends user name : ".as_bytes());
+                let mut my_string = String :: new() ;
+                read_method.read_line(&mut my_string) ;
+                let mut flag = false;
+                {
+                    flag = users.lock().unwrap().contains_user(name.clone());
+                }
+                if flag{
+                    users.lock().unwrap().add_friend(name.clone() , my_string.clone());
+                }
+                else{
+                    stream_loop2.write("no such user id\n".as_bytes());
+                }
+
+
+            }
+            else if (vec[0] == 'F'){
+                let vec = users.lock().unwrap().get_friend_list(name.clone());
+                let mut temp : HashSet<String> = HashSet :: new() ;
+                for x in 0..vec.len(){
+                    let mut flag = false ;
+                    {
+                        flag = online_users.lock().unwrap().contains_key(&vec[x].clone());
+                    }
+                    if flag{
+                        temp.insert(vec[x].clone());
+                    }
+
+                }
+                if temp.len() == 0 {
+                    stream_loop2.write("no friends online bohooooo\n".as_bytes());
+                }
+                else{
+                    stream_loop2.write("Here is your online friends list : \n".as_bytes());
+
+                    for x in temp.iter() {
+                        stream_loop2.write(x.clone().as_bytes());
+                    }
+
+                    stream_loop2.write("Enter a friends name : ".as_bytes());
+                    let mut my_string = String :: new() ;
+                    read_method.read_line(&mut my_string) ;
+
+                    if temp.contains(&my_string.clone()) {
+                        let mut temp : bool = false ;
+                        {
+                            let temp = users.lock().unwrap().get_busy(my_string.clone());
+                        }
+                        if temp {
+                            let mut frd_stream = online_users.lock().unwrap().get_mut(&my_string).unwrap().try_clone().unwrap();
+                            let mut my_string = String :: new() ;
+                            read_method.read_line(&mut my_string) ;
+                            let mut dm_sender_name = name.clone();
+                            dm_sender_name.pop();
+                            dm_sender_name.pop();
+                            my_string = dm_sender_name + &" send you a direct messsage : ".to_string() + &my_string;
+                            frd_stream.write(my_string.clone().as_bytes());
+                            continue ;
+                        }
+                        else{
+                            let mut stream1 : TcpStream ; 
+                            let mut stream2 : TcpStream ; 
+                            {
+                            stream1 = online_users.lock().unwrap().get_mut(&my_string.clone()).unwrap().try_clone().unwrap()
+                            }
+                            {
+                            stream2 = online_users.lock().unwrap().get_mut(&name.clone()).unwrap().try_clone().unwrap()
+                            }
+                            {
+                                users.lock().unwrap().set_busy_true(my_string.clone());
+                            }
+                            let mut name1 = my_string.clone() ;
+                            let mut name1_2 = my_string.clone();
+                            let mut name2 = name.clone() ;
+                            name1.pop();
+                            name1.pop();
+                            name2.pop();
+                            name2.pop();
+                            let mut stream1_1 = stream1.try_clone().unwrap();
+                            let mut name_temp = name.clone();
+                            name_temp.pop() ;
+                            name_temp.pop() ;
+                            let mut  my_string = "\n".to_string()+ &name_temp + " would like to chat with you , Accept by entering Yes or else No\n" ;
+                            stream1.write(my_string.as_bytes());
+                            let mut my_string = String :: new() ;
+                            let mut read = BufReader :: new(stream1_1);
+                            read.read_line(&mut my_string);
+                            my_string.pop();
+                            my_string.pop();
+                            if my_string == "start".to_string() || my_string == "N".to_string(){
+                                let quit_flag_indi = Quit_flag :: new() ;
+                                let quit_flag_indi = Arc :: new(Mutex::new(quit_flag_indi));
+                                let quit_flag_indi2 = quit_flag_indi.clone();
+                                user_chat_loop(stream1,stream2,name1.clone(),name2.clone() , quit_flag_indi);
+
+                                while quit_flag_indi2.lock().unwrap().get() == false {} ;
+                                {
+                                    users.lock().unwrap().set_busy_false(name1_2.clone());
+                                }
+                                continue ;
+                            }
+                            else {
+                                {
+                                    users.lock().unwrap().set_busy_false(name1_2.clone());
+                                }
+                                stream2.write("Your request is Declined".as_bytes())  ;                              
+                                continue ;
+                            }
+                            
+                        }
+                    }
+                    stream_loop2.write("Wrong friend name ! \n".as_bytes());
+                }
+
+
+
+            }
+            else if(vec[0] == 'C'){
+                {
+                    stream_loop2.write("please enter chatroom name:".as_bytes());
+
+                    let mut my_string = String :: new() ;
+                    read_method.read_line(&mut my_string) ;
+                    let group_chat1 = group_chat.clone();  
+                    create_chatroom(group_chat1 , my_string.clone());
+                    let group_chat2 = group_chat.clone();
+
+                    let mut quit_flag = Quit_flag::new() ;
+                    let quit_flag = Arc :: new(Mutex::new(quit_flag));
+                    let quit_flag2 = quit_flag.clone();
+
+                    
+
+                    join_group_chat(stream_loop2 , my_string.clone() , group_chat2 , name.clone() , quit_flag2);
+
+                    let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
+                    stream_loop3.write(chat_reminder.as_bytes());
+                    while quit_flag.lock().unwrap().get() == false {}
+                    continue ;
+                }   
+            }
+            else if (vec[0] == 'J'){
+                let group_chat3 = group_chat.clone();
+                let set = group_chat3.lock().unwrap().get_chatroom_list();
+                if set.len() == 0 {
+                    stream_loop2.write("There are no live chatrooms\n".as_bytes());
+                    continue;
+                }
+                for x in set.iter() {
+                    stream_loop2.write(x.as_bytes());
+                }
+                stream_loop2.write("please enther chatroom name:".as_bytes());
+                let mut my_string = String :: new() ;
+                read_method.read_line(&mut my_string) ;
+
+                if set.contains(&my_string.clone()) {
+
+                    let group_chat = group_chat.clone();
+
+                    let mut quit_flag = Quit_flag::new() ;
+                    let quit_flag = Arc :: new(Mutex::new(quit_flag));
+                    let quit_flag2 = quit_flag.clone();
+
+                    join_group_chat(stream_loop2 , my_string.clone() , group_chat , name.clone() , quit_flag2);
+                    let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
+                    stream_loop3.write(chat_reminder.as_bytes());
+                    while quit_flag.lock().unwrap().get() == false{}
+                    continue ;
+                }
+                else {
+                    stream_loop2.write("Wrong chatroom name! \n".as_bytes());
+                }
+            }
+            else{
+                stream_loop2.write("please enter valid response\n".as_bytes());
+                continue;
+            }
+        {
+            users.lock().unwrap().set_busy_false(name.clone()) ;
+        }
+
         }
     }
     
 
 }
 
+fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : String , name2 : String , quit_flag : Arc<Mutex<Quit_flag>>){
+
+    let mut stream1_2 = stream1.try_clone().unwrap() ;
+    let mut stream1_3 = stream1.try_clone().unwrap() ;
+    let mut stream2_2 = stream2.try_clone().unwrap() ;
+    let mut stream2_3 = stream2.try_clone().unwrap() ;
+    let quit_flag_thread1 = quit_flag.clone();
+    let quit_flag_thread2 = quit_flag.clone();
+    thread :: spawn(move || {
+        loop {
+            let mut temp = false;
+            {
+                let temp = quit_flag_thread1.lock().unwrap().get();
+            }
+            if temp {
+                break ;
+            }
+            let mut read_method = BufReader::new(&stream1_2) ;
+            let mut my_string = String :: new() ;
+            read_method.read_line(&mut my_string) ;
+            my_string.pop();
+            my_string.pop();
+
+            if my_string == "QUIT".to_string() {
+                    quit_flag_thread1.lock().unwrap().set() ;
+                    //my_string = name_2.clone() + " has left \n";
+                    //stream1_3.write(my_string.as_bytes());
+                    break ;
+                }
+            my_string = name1.clone() + " : "+ &my_string + "\n";
+            stream2_3.write(my_string.clone().as_bytes());
+        }
+    });
+
+
+    thread :: spawn(move || {
+        loop {
+            let mut temp = false;
+            {
+                let temp = quit_flag_thread2.lock().unwrap().get();
+            }
+            if temp {
+                break ;
+            }
+            let mut read_method = BufReader::new(&stream2_2) ;
+            let mut my_string = String :: new() ;
+            read_method.read_line(&mut my_string) ;
+            my_string.pop();
+            my_string.pop();
+            let mut temp = false;
+            {
+                let temp = quit_flag_thread2.lock().unwrap().get();
+            }
+            if my_string == "QUIT".to_string(){
+                    quit_flag_thread2.lock().unwrap().set() ;
+                    //my_string = name_2.clone() + " has left \n";
+                    //stream1_3.write(my_string.as_bytes());
+                    break ;
+            }
+            my_string = name2.clone() + " : "+ &my_string + "\n";
+            stream1_3.write(my_string.clone().as_bytes());
+        }
+    });
+}
+
 fn join_group_chat (mut stream : TcpStream , name : String , 
                     group_chat :Arc<Mutex<Group_chat>> , user_name : String , quit_flag : Arc<Mutex<Quit_flag>>){
+
     let sender = group_chat.lock().unwrap().get_sender(name.clone()) ; 
     let receiver = group_chat.lock().unwrap().get_receiver(name.clone());
     let(unique_s , unique_r) = chan :: sync(100);
@@ -380,6 +530,7 @@ struct User_info{
     name : String ,
     password : String,
     friend_list : HashSet<String>,
+    busy : bool ,
 
 }
 
@@ -403,7 +554,7 @@ impl User_info_map{
                     set_frds.insert(vec[x].to_string().clone());
                 }
             }
-            let mut user = User_info{name:vec[0].to_string().clone() , password : vec[1].to_string().clone() , friend_list:set_frds};
+            let mut user = User_info{name:vec[0].to_string().clone() , password : vec[1].to_string().clone() , friend_list:set_frds , busy : false};
             map.insert(vec[0].to_string().clone() , user);
         }
         User_info_map{
@@ -440,7 +591,7 @@ impl User_info_map{
         writer.write(name.as_bytes());
         writer.write(" ".to_string().as_bytes());
         writer.write(password.as_bytes());
-        let temp = User_info{name : name.clone() , password : password.clone() , friend_list : HashSet::new()} ;
+        let temp = User_info{name : name.clone() , password : password.clone() , friend_list : HashSet::new() , busy : false};
         self.map.insert(name , temp);
     }
     fn add_friend(&mut self , name : String , friend : String){
@@ -476,6 +627,21 @@ impl User_info_map{
         }
 
         return vec ;
+    }
+    fn set_busy_true(&mut self , user_name : String){
+        self.map.get_mut(&user_name).unwrap().busy = true;
+    }
+    fn set_busy_false(&mut self , user_name : String){
+        self.map.get_mut(&user_name).unwrap().busy = false;
+    }
+
+    fn get_busy(&mut self , user_name : String) -> bool{
+        if(self.map.get(&user_name).unwrap().busy){
+            return true;
+         }
+        else {
+            return false;
+        }
     }
 }
 
