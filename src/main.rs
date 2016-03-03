@@ -208,10 +208,17 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                 let group_chat1 = group_chat.clone();  
                 create_chatroom(group_chat1 , my_string.clone());
                 let group_chat2 = group_chat.clone();
-                join_group_chat(stream_loop2 , my_string.clone() , group_chat2 , name.clone());
+
+                let mut quit_flag = Quit_flag::new() ;
+                let quit_flag = Arc :: new(Mutex::new(quit_flag));
+                let quit_flag2 = quit_flag.clone();
+
+
+                join_group_chat(stream_loop2 , my_string.clone() , group_chat2 , name.clone() , quit_flag2);
                 let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
                 stream_loop3.write(chat_reminder.as_bytes());
-                break;
+                while quit_flag.lock().unwrap().get() == false{}
+                continue ;
             }   
         }
         else if (vec[0] == 'J'){
@@ -231,10 +238,17 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
             if set.contains(&my_string.clone()) {
 
                 let group_chat = group_chat.clone();
-                join_group_chat(stream_loop2 , my_string.clone() , group_chat , name.clone());
+
+                let mut quit_flag = Quit_flag::new() ;
+                let quit_flag = Arc :: new(Mutex::new(quit_flag));
+                let quit_flag2 = quit_flag.clone();
+
+
+                join_group_chat(stream_loop2 , my_string.clone() , group_chat , name.clone() , quit_flag2);
                 let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
                 stream_loop3.write(chat_reminder.as_bytes());
-                break;
+                while quit_flag.lock().unwrap().get() == false{}
+                continue ;
             }
             else {
                 stream_loop2.write("Wrong chatroom name! \n".as_bytes());
@@ -249,28 +263,41 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
 
 }
 
-fn join_group_chat (mut stream : TcpStream , name : String , group_chat :Arc<Mutex<Group_chat>> , user_name : String){
+fn join_group_chat (mut stream : TcpStream , name : String , 
+                    group_chat :Arc<Mutex<Group_chat>> , user_name : String , quit_flag : Arc<Mutex<Quit_flag>>){
     let sender = group_chat.lock().unwrap().get_sender(name.clone()) ; 
     let receiver = group_chat.lock().unwrap().get_receiver(name.clone());
     let(unique_s , unique_r) = chan :: sync(100);
-    group_chat.lock().unwrap().add_member(name.clone() ,unique_s );
-    handle_client( stream , sender , unique_r , user_name.clone());
+    group_chat.lock().unwrap().add_member(name.clone() ,user_name.clone() , unique_s );
+    handle_client( stream , sender , unique_r , user_name.clone() , quit_flag , group_chat , name.clone());
 }
 
-fn handle_client(mut stream : TcpStream ,sender : chan :: Sender<String> , receiver : chan :: Receiver<String> , mut name : String) {
+
+fn handle_client(mut stream : TcpStream ,sender : chan :: Sender<String> , 
+                receiver : chan :: Receiver<String> , mut name : String , 
+                quit_flag : Arc<Mutex<Quit_flag>> , group_chat : Arc<Mutex<Group_chat>> , chat_name : String) {
+
         let mut clone_stream = stream.try_clone().unwrap() ;
         let mut clone_stream2 = stream.try_clone().unwrap() ;
         let sender = sender.clone() ;
         let receiver = receiver.clone() ;
+        let name2 = name.clone();
 
         name.pop();
         name.pop();
 
         let mut name_2 = name.clone();
 
+        let quit_flag_thread1 = quit_flag.clone();
+        let quit_flag_thread2 = quit_flag.clone();
+        let group_chat1 = group_chat.clone() ;
+
         thread:: spawn(move || {
             loop{
-
+                if quit_flag_thread1.lock().unwrap().get(){
+                    group_chat1.lock().unwrap().remove_member(chat_name.clone() , name2);
+                    break;
+                }
                 let rec_message = receiver.recv().unwrap();
                 let mut rec_message_temp = rec_message.clone();
 
@@ -286,8 +313,14 @@ fn handle_client(mut stream : TcpStream ,sender : chan :: Sender<String> , recei
             loop {
                 let mut read_method = BufReader::new(&clone_stream2) ;
                 let mut my_string = String :: new() ;
-                my_string = name_2.clone() + " : "+ &my_string;
                 read_method.read_line(&mut my_string) ;
+                my_string.pop();
+                my_string.pop();
+                if my_string == "QUIT".to_string() {
+                    quit_flag_thread2.lock().unwrap().set() ;
+                    break ;
+                }
+                my_string = name_2.clone() + " : "+ &my_string + "\n";
                 sender.send(my_string); 
             }
         });
@@ -295,6 +328,7 @@ fn handle_client(mut stream : TcpStream ,sender : chan :: Sender<String> , recei
 
 
 }
+
 
 
 
@@ -314,6 +348,30 @@ fn create_chatroom(group_chat : Arc<Mutex<Group_chat>> , name : String) {
         }
 
     });
+}
+
+struct Quit_flag{
+    flag : bool,
+}
+
+impl Quit_flag {
+    fn new()->Quit_flag{
+        Quit_flag{
+            flag : false,
+        }
+    }
+    fn set(&mut self){
+        self.flag = true;
+    }
+
+    fn get(&mut self)->bool{
+        if self.flag {
+            return true ;
+        }
+        else { 
+            return false;
+        }
+    }
 }
 
 struct User_info{
@@ -426,12 +484,12 @@ impl User_info_map{
 struct channels {
     sender : chan ::Sender<String> ,
     receiver : chan :: Receiver<String>,
-    list_sender : Vec<chan :: Sender<String>>,
+    list_sender : HashMap<String , chan :: Sender<String>> ,
 }
 
 impl channels {
-    fn add_member(&mut self ,sender: chan :: Sender<String> ) {
-        self.list_sender.push(sender);
+    fn add_member(&mut self , name : String,sender: chan :: Sender<String> ) {
+       self.list_sender.insert(name , sender);
     }
 }
 
@@ -447,7 +505,7 @@ impl Group_chat {
     }
 
     fn create_group(&mut self , name: String , sender : chan ::Sender<String> , receiver : chan :: Receiver<String>) {
-        let mut temp = channels{sender : sender , receiver : receiver,list_sender : Vec:: new()} ;
+        let mut temp = channels{sender : sender , receiver : receiver,list_sender : HashMap:: new()} ;
         self.map.insert(name , temp);
     }
 
@@ -475,12 +533,18 @@ impl Group_chat {
 
     }
 
-    fn add_member (&mut self , name: String , sender : chan ::Sender<String>  ){
-        self.map.get_mut(&name).unwrap().add_member(sender);
+    fn add_member (&mut self , chat_name: String ,users_name : String ,sender : chan ::Sender<String>  ){
+        self.map.get_mut(&chat_name).unwrap().add_member(users_name , sender);
+
     }
 
     fn get_sender_list(&mut self , name : String) -> Vec<chan :: Sender<String>>{
-        self.map.get(&name).unwrap().list_sender.clone() 
+        let mut vec = Vec :: new();
+        for key in self.map.get(&name).unwrap().list_sender.keys(){
+            vec.push(self.map.get(&name).unwrap().list_sender.get(key).unwrap().clone());
+        }
+        vec
+        //self.map.get(&name).unwrap().list_sender.clone() 
     }
 
     fn get_chatroom_list(&mut self) -> HashSet<String>{
@@ -490,6 +554,12 @@ impl Group_chat {
         }
         return set ;
     }
+    
+    fn remove_member(&mut self , chat_room : String , name : String){
+       let temp : &mut channels =  self.map.get_mut(&chat_room).unwrap();
+       temp.list_sender.remove(&name);
+    }
+    
 
 
 
