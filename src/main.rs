@@ -56,6 +56,9 @@ fn login(mut stream : TcpStream , group_chat : Arc<Mutex<Group_chat>> , users : 
         for x in my_string.clone().chars() {
             vec.push(x);
         }
+        if vec.len() != 3 {
+            continue;
+        }
         if vec[0] == 'Y'{
 
             stream_loop2.write("Please enter your user name : ".as_bytes());
@@ -134,6 +137,11 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
         for x in my_string.clone().chars() {
             vec.push(x);
         }
+
+        if vec.len() != 3 {
+            continue;
+        }
+        
         if(vec[0] == 'A'){
             stream_loop2.write("please enter your friends user name : ".as_bytes());
             let mut my_string = String :: new() ;
@@ -544,7 +552,6 @@ impl Group_chat {
             vec.push(self.map.get(&name).unwrap().list_sender.get(key).unwrap().clone());
         }
         vec
-        //self.map.get(&name).unwrap().list_sender.clone() 
     }
 
     fn get_chatroom_list(&mut self) -> HashSet<String>{
