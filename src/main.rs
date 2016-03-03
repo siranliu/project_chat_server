@@ -56,6 +56,9 @@ fn login(mut stream : TcpStream , group_chat : Arc<Mutex<Group_chat>> , users : 
         for x in my_string.clone().chars() {
             vec.push(x);
         }
+        if vec.len() != 3 {
+            continue;
+        }
         if vec[0] == 'Y'{
 
             stream_loop2.write("Please enter your user name : ".as_bytes());
@@ -130,6 +133,7 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
         let mut read_method = BufReader::new(stream_loop) ;
         let mut my_string = String :: new() ;
         read_method.read_line(&mut my_string) ;
+
         my_string.pop();
         my_string.pop();
         if my_string == "Yes".to_string(){
@@ -138,6 +142,27 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                 if users.lock().unwrap().get_busy(name.clone())==false {
                     break ;
                 }
+        }
+        let mut vec : Vec<char> = Vec :: new() ;
+        for x in my_string.clone().chars() {
+            vec.push(x);
+        }
+
+        if vec.len() != 3 {
+            continue;
+        }
+        
+        if(vec[0] == 'A'){
+            stream_loop2.write("please enter your friends user name : ".as_bytes());
+            let mut my_string = String :: new() ;
+            read_method.read_line(&mut my_string) ;
+            let mut flag = false;
+            {
+                flag = users.lock().unwrap().contains_user(name.clone());
+            }
+            if flag{
+                users.lock().unwrap().add_friend(name.clone() , my_string.clone());
+
             }
             continue ;
         }
