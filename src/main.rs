@@ -126,7 +126,7 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
         let mut stream_loop = stream.try_clone().unwrap();
         let mut stream_loop2 = stream.try_clone().unwrap();
         let mut stream_loop3 = stream_loop2.try_clone().unwrap();
-        stream_loop.write("Enter F to chat with friend or A to add new friend\nEnter J for Join or C for Create chat rooms : \n".as_bytes());
+        stream_loop.write("Enter F to chat with friend or A to add new friend\nEnter J for Join or C for Create chat rooms : ".as_bytes());
         let mut read_method = BufReader::new(stream_loop) ;
         let mut my_string = String :: new() ;
         read_method.read_line(&mut my_string) ;
@@ -318,6 +318,8 @@ fn handle_client(mut stream : TcpStream ,sender : chan :: Sender<String> ,
                 my_string.pop();
                 if my_string == "QUIT".to_string() {
                     quit_flag_thread2.lock().unwrap().set() ;
+                    my_string = name_2.clone() + " has left the group chat.\n";
+                    sender.send(my_string); 
                     break ;
                 }
                 my_string = name_2.clone() + " : "+ &my_string + "\n";
@@ -544,7 +546,6 @@ impl Group_chat {
             vec.push(self.map.get(&name).unwrap().list_sender.get(key).unwrap().clone());
         }
         vec
-        //self.map.get(&name).unwrap().list_sender.clone() 
     }
 
     fn get_chatroom_list(&mut self) -> HashSet<String>{
