@@ -261,6 +261,8 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                             name_temp.pop() ;
                             let mut  my_string = "\n".to_string()+ &name_temp + " would like to chat with you , Accept by entering Yes or else No\n" ;
                             stream1.write(my_string.as_bytes());
+                            my_string = "waiting for other user to accept \n".to_string();
+                            stream2.write(my_string.clone().as_bytes());
                             let mut my_string = String :: new() ;
                             let mut read = BufReader :: new(stream1_1);
                             read.read_line(&mut my_string);
@@ -270,9 +272,13 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                                 let quit_flag_indi = Quit_flag :: new() ;
                                 let quit_flag_indi = Arc :: new(Mutex::new(quit_flag_indi));
                                 let quit_flag_indi2 = quit_flag_indi.clone();
-                                user_chat_loop(stream1,stream2,name1.clone(),name2.clone() , quit_flag_indi);
 
-                                while quit_flag_indi2.lock().unwrap().get() == false {} ;
+                                let quit_flag_indi_2 = Quit_flag :: new() ;
+                                let quit_flag_indi_2 = Arc :: new(Mutex::new(quit_flag_indi_2));
+                                let quit_flag_indi_2_2 = quit_flag_indi_2.clone();
+                                user_chat_loop(stream1,stream2,name1.clone(),name2.clone() , quit_flag_indi , quit_flag_indi_2);
+
+                                while quit_flag_indi2.lock().unwrap().get() == false || quit_flag_indi_2_2.lock().unwrap().get() == false{} ;
                                 {
                                     users.lock().unwrap().set_busy_false(name1_2.clone());
                                 }
@@ -383,23 +389,22 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
 
 }
 
-fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : String , name2 : String , quit_flag : Arc<Mutex<Quit_flag>>){
+fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : String , name2 : String , 
+                    quit_flag : Arc<Mutex<Quit_flag>> , quit_flag2 : Arc<Mutex<Quit_flag>>){
 
     let mut stream1_2 = stream1.try_clone().unwrap() ;
     let mut stream1_3 = stream1.try_clone().unwrap() ;
+    let mut stream1_4 = stream1.try_clone().unwrap() ;
     let mut stream2_2 = stream2.try_clone().unwrap() ;
     let mut stream2_3 = stream2.try_clone().unwrap() ;
+    let mut stream2_4 = stream2.try_clone().unwrap() ;
     let quit_flag_thread1 = quit_flag.clone();
-    let quit_flag_thread2 = quit_flag.clone();
+    let quit_flag_thread2 = quit_flag2.clone();
+    let quit_flag_thread1_2 = quit_flag.clone();
+    let quit_flag_thread2_2 = quit_flag2.clone();
+
     thread :: spawn(move || {
         loop {
-            let mut temp = false;
-            {
-                temp = quit_flag_thread1.lock().unwrap().get() ;
-            }
-            if temp {
-                break ;
-            }
             let mut read_method = BufReader::new(&stream1_2) ;
             let mut my_string = String :: new() ;
             read_method.read_line(&mut my_string) ;
@@ -407,7 +412,9 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
             my_string.pop();
 
             if my_string == "QUIT".to_string() {
-                    quit_flag_thread1.lock().unwrap().set() ;
+                    quit_flag_thread2.lock().unwrap().set() ;
+                    my_string = name1.clone() + " has quit plz enter any key to go back to lobby \n" ;
+                    stream2_3.write(my_string.clone().as_bytes());
                     break ;
             }
             let mut temp = false;
@@ -415,6 +422,9 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
                 temp = quit_flag_thread1.lock().unwrap().get() ;
             }
             if temp {
+                quit_flag_thread2.lock().unwrap().set();
+                my_string = "waiting for other user to quit".to_string();
+                stream1_4.write(my_string.clone().as_bytes());
                 break ;
             }
             my_string = name1.clone() + " : "+ &my_string + "\n";
@@ -425,27 +435,25 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
 
     thread :: spawn(move || {
         loop {
-            let mut temp = false;
-            {
-                temp = quit_flag_thread2.lock().unwrap().get() ;
-            }
-            if temp {
-                break ;
-            }
             let mut read_method = BufReader::new(&stream2_2) ;
             let mut my_string = String :: new() ;
             read_method.read_line(&mut my_string) ;
             my_string.pop();
             my_string.pop();
             if my_string == "QUIT".to_string(){
-                    quit_flag_thread2.lock().unwrap().set() ;
+                    quit_flag_thread1_2.lock().unwrap().set() ;
+                    my_string = name2.clone() + " has quit plz enter any key to go back to lobby \n" ;
+                    stream1_3.write(my_string.clone().as_bytes());
                     break ;
             }
             let mut temp = false;
             {
-                temp = quit_flag_thread2.lock().unwrap().get() ;
+                temp = quit_flag_thread2_2.lock().unwrap().get() ;
             }
             if temp {
+                quit_flag_thread1_2.lock().unwrap().set();
+                my_string = "waiting for other user to quit".to_string();
+                stream2_4.write(my_string.clone().as_bytes());
                 break ;
             }
             my_string = name2.clone() + " : "+ &my_string + "\n";
