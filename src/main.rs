@@ -1,4 +1,4 @@
-
+#![allow(warnings)]
 use std::net::{TcpListener};
 use std::collections::HashMap;
 use std::io::{BufReader,BufWriter};
@@ -136,30 +136,48 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
 
         my_string.pop();
         my_string.pop();
-        if my_string == "Yes".to_string(){
-            stream_loop2.write("you are now in private chat enter start to begin chat. \n".as_bytes());
-            loop {
-                if users.lock().unwrap().get_busy(name.clone())==false {
-                    break ;
-                }
-            continue ;    
-            }
+        {
+            users.lock().unwrap().set_busy_true(name.clone()) ;
         }
-        else if my_string == "No".to_string(){
-            stream_loop2.write("Decline chat request? (Y/N) \n".as_bytes());
-            loop {
-                if users.lock().unwrap().get_busy(name.clone())==false {
-                    break ;
+        let mut flag = false;
+        {
+            flag = users.lock().unwrap().get_priavte_chat(name.clone());
+        }
+        if flag {
+
+
+            if my_string == "Yes".to_string(){
+                stream_loop2.write("you are now in private chat enter start to begin chat. \n".as_bytes());
+                loop {
+                    if users.lock().unwrap().get_busy(name.clone())==false {
+                        break ;
+                    }
+                continue ;    
                 }
             }
-            continue ;  
+            else if my_string == "No".to_string(){
+                stream_loop2.write("Decline chat request? (Y/N) \n".as_bytes());
+                loop {
+                    if users.lock().unwrap().get_busy(name.clone())==false {
+                        break ;
+                    }
+                }
+                continue ;  
+            }
+            else {
+                stream_loop2.write("Invalid response , Decline chat request? (Y/N), If Enter N chat will start\n".as_bytes());
+                loop {
+                    if users.lock().unwrap().get_busy(name.clone())==false {
+                        break ;
+                    }
+                }
+                continue ; 
+            }
         }
         
 
         else{
-            {
-                users.lock().unwrap().set_busy_true(name.clone()) ;
-            }
+
             let mut vec : Vec<char> = Vec :: new() ;
             for x in my_string.clone().chars() {
                 vec.push(x);
@@ -239,6 +257,9 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                             continue ;
                         }
                         else{
+                            {
+                                users.lock().unwrap().set_private_chat_true(my_string.clone());
+                            }
                             let mut stream1 : TcpStream ; 
                             let mut stream2 : TcpStream ; 
                             {
@@ -271,6 +292,7 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                             my_string.pop();
                             my_string.pop();
                             if my_string == "start".to_string() || my_string == "N".to_string(){
+                                stream1.write("Chat is live\n".to_string().as_bytes());
                                 let quit_flag_indi = Quit_flag :: new() ;
                                 let quit_flag_indi = Arc :: new(Mutex::new(quit_flag_indi));
                                 let quit_flag_indi2 = quit_flag_indi.clone();
@@ -278,15 +300,25 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                                 let quit_flag_indi_2 = Quit_flag :: new() ;
                                 let quit_flag_indi_2 = Arc :: new(Mutex::new(quit_flag_indi_2));
                                 let quit_flag_indi_2_2 = quit_flag_indi_2.clone();
+                                stream2.write("Accepted , you can now start chatting\n".to_string().as_bytes());
                                 user_chat_loop(stream1,stream2,name1.clone(),name2.clone() , quit_flag_indi , quit_flag_indi_2);
 
                                 while quit_flag_indi2.lock().unwrap().get() == false || quit_flag_indi_2_2.lock().unwrap().get() == false{} ;
+                                {
+                                    users.lock().unwrap().set_private_chat_false(name1_2.clone());
+                                }
                                 {
                                     users.lock().unwrap().set_busy_false(name1_2.clone());
                                 }
                                 continue ;
                             }
                             else {
+                                if my_string != "Y".to_string() {
+                                    stream1.write("Invalid response , Request Declined\n".to_string().as_bytes());
+                                }
+                                {
+                                    users.lock().unwrap().set_private_chat_false(name1_2.clone());
+                                }
                                 {
                                     users.lock().unwrap().set_busy_false(name1_2.clone());
                                 }
@@ -417,6 +449,7 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
                     quit_flag_thread2.lock().unwrap().set() ;
                     my_string = name1.clone() + " has quit plz enter any key to go back to lobby \n" ;
                     stream2_3.write(my_string.clone().as_bytes());
+                    stream1_4.write("waiting for other user to quit\n".to_string().as_bytes());
                     break ;
             }
             let mut temp = false;
@@ -425,8 +458,6 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
             }
             if temp {
                 quit_flag_thread2.lock().unwrap().set();
-                my_string = "waiting for other user to quit".to_string();
-                stream1_4.write(my_string.clone().as_bytes());
                 break ;
             }
             my_string = name1.clone() + " : "+ &my_string + "\n";
@@ -446,6 +477,7 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
                     quit_flag_thread1_2.lock().unwrap().set() ;
                     my_string = name2.clone() + " has quit plz enter any key to go back to lobby \n" ;
                     stream1_3.write(my_string.clone().as_bytes());
+                    stream2_4.write("waiting for other user to quit\n".to_string().as_bytes());
                     break ;
             }
             let mut temp = false;
@@ -454,8 +486,6 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
             }
             if temp {
                 quit_flag_thread1_2.lock().unwrap().set();
-                my_string = "waiting for other user to quit".to_string();
-                stream2_4.write(my_string.clone().as_bytes());
                 break ;
             }
             my_string = name2.clone() + " : "+ &my_string + "\n";
@@ -583,6 +613,7 @@ struct User_info{
     password : String,
     friend_list : HashSet<String>,
     busy : bool ,
+    private_chat : bool ,
 
 }
 
@@ -606,7 +637,8 @@ impl User_info_map{
                     set_frds.insert(vec[x].to_string().clone());
                 }
             }
-            let mut user = User_info{name:vec[0].to_string().clone() , password : vec[1].to_string().clone() , friend_list:set_frds , busy : false};
+            let mut user = User_info{name:vec[0].to_string().clone() , password : vec[1].to_string().clone() ,
+                             friend_list:set_frds , busy : false , private_chat : false};
             map.insert(vec[0].to_string().clone() , user);
         }
         User_info_map{
@@ -643,7 +675,8 @@ impl User_info_map{
         writer.write(name.as_bytes());
         writer.write(" ".to_string().as_bytes());
         writer.write(password.as_bytes());
-        let temp = User_info{name : name.clone() , password : password.clone() , friend_list : HashSet::new() , busy : false};
+        let temp = User_info{name : name.clone() , password : password.clone() , 
+                    friend_list : HashSet::new() , busy : false, private_chat : false};
         self.map.insert(name , temp);
     }
     fn add_friend(&mut self , name : String , friend : String){
@@ -689,6 +722,22 @@ impl User_info_map{
 
     fn get_busy(&mut self , user_name : String) -> bool{
         if(self.map.get(&user_name).unwrap().busy){
+            return true;
+         }
+        else {
+            return false;
+        }
+    }
+
+    fn set_private_chat_true(&mut self , user_name : String){
+        self.map.get_mut(&user_name).unwrap().private_chat = true;
+    }
+    fn set_private_chat_false(&mut self , user_name : String){
+        self.map.get_mut(&user_name).unwrap().private_chat = false;
+    }
+
+    fn get_priavte_chat(&mut self , user_name : String) -> bool{
+        if(self.map.get(&user_name).unwrap().private_chat){
             return true;
          }
         else {
