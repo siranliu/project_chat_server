@@ -223,13 +223,15 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                             temp = users.lock().unwrap().get_busy(my_string.clone());
                         }
                         if temp {
+                            stream_loop2.write("User is busy , you can only send him/her a message : ".to_string().as_bytes());
                             let mut frd_stream = online_users.lock().unwrap().get_mut(&my_string).unwrap().try_clone().unwrap();
                             let mut my_string = String :: new() ;
                             read_method.read_line(&mut my_string) ;
                             let mut dm_sender_name = name.clone();
                             dm_sender_name.pop();
                             dm_sender_name.pop();
-                            my_string = dm_sender_name + &" send you a direct messsage : ".to_string() + &my_string;
+                            my_string = dm_sender_name + &" send you a messsage : ".to_string() + &my_string + 
+                                        "(If you want to reply , you have to go back to looby) \n";
                             frd_stream.write(my_string.clone().as_bytes());
                                 {
                                     users.lock().unwrap().set_busy_false(name.clone()) ;
