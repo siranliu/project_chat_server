@@ -142,29 +142,8 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                 if users.lock().unwrap().get_busy(name.clone())==false {
                     break ;
                 }
-        }
-        let mut vec : Vec<char> = Vec :: new() ;
-        for x in my_string.clone().chars() {
-            vec.push(x);
-        }
-
-        if vec.len() != 3 {
-            continue;
-        }
-        
-        if(vec[0] == 'A'){
-            stream_loop2.write("please enter your friends user name : ".as_bytes());
-            let mut my_string = String :: new() ;
-            read_method.read_line(&mut my_string) ;
-            let mut flag = false;
-            {
-                flag = users.lock().unwrap().contains_user(name.clone());
+            continue ;    
             }
-            if flag{
-                users.lock().unwrap().add_friend(name.clone() , my_string.clone());
-
-            }
-            continue ;
         }
         else if my_string == "No".to_string(){
             stream_loop2.write("Decline chat request? (Y/N) \n".as_bytes());
@@ -173,9 +152,10 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                     break ;
                 }
             }
-
-            continue ;
+            continue ;  
         }
+        
+
         else{
             {
                 users.lock().unwrap().set_busy_true(name.clone()) ;
@@ -194,9 +174,15 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                 }
                 if flag{
                     users.lock().unwrap().add_friend(name.clone() , my_string.clone());
+                    {
+                        users.lock().unwrap().set_busy_false(name.clone()) ;
+                    }
                 }
                 else{
                     stream_loop2.write("no such user id\n".as_bytes());
+                    {
+                        users.lock().unwrap().set_busy_false(name.clone()) ;
+                    }
                 }
 
 
@@ -216,6 +202,9 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                 }
                 if temp.len() == 0 {
                     stream_loop2.write("no friends online bohooooo\n".as_bytes());
+                    {
+                        users.lock().unwrap().set_busy_false(name.clone()) ;
+                    }
                 }
                 else{
                     stream_loop2.write("Here is your online friends list : \n".as_bytes());
@@ -231,7 +220,7 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                     if temp.contains(&my_string.clone()) {
                         let mut temp : bool = false ;
                         {
-                            let temp = users.lock().unwrap().get_busy(my_string.clone());
+                            temp = users.lock().unwrap().get_busy(my_string.clone());
                         }
                         if temp {
                             let mut frd_stream = online_users.lock().unwrap().get_mut(&my_string).unwrap().try_clone().unwrap();
@@ -242,6 +231,9 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                             dm_sender_name.pop();
                             my_string = dm_sender_name + &" send you a direct messsage : ".to_string() + &my_string;
                             frd_stream.write(my_string.clone().as_bytes());
+                                {
+                                    users.lock().unwrap().set_busy_false(name.clone()) ;
+                                }
                             continue ;
                         }
                         else{
@@ -290,7 +282,10 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                                 {
                                     users.lock().unwrap().set_busy_false(name1_2.clone());
                                 }
-                                stream2.write("Your request is Declined".as_bytes())  ;                              
+                                stream2.write("Your request is Declined\n".as_bytes())  ;
+                                {
+                                    users.lock().unwrap().set_busy_false(name.clone()) ;
+                                }                              
                                 continue ;
                             }
                             
@@ -323,6 +318,9 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                     let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
                     stream_loop3.write(chat_reminder.as_bytes());
                     while quit_flag.lock().unwrap().get() == false {}
+                    {
+                        users.lock().unwrap().set_busy_false(name.clone()) ;
+                    }
                     continue ;
                 }   
             }
@@ -331,6 +329,9 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                 let set = group_chat3.lock().unwrap().get_chatroom_list();
                 if set.len() == 0 {
                     stream_loop2.write("There are no live chatrooms\n".as_bytes());
+                    {
+                        users.lock().unwrap().set_busy_false(name.clone()) ;
+                    }                    
                     continue;
                 }
                 for x in set.iter() {
@@ -352,14 +353,24 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                     let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone();
                     stream_loop3.write(chat_reminder.as_bytes());
                     while quit_flag.lock().unwrap().get() == false{}
+                    {
+                        users.lock().unwrap().set_busy_false(name.clone()) ;
+                    }                    
                     continue ;
                 }
                 else {
                     stream_loop2.write("Wrong chatroom name! \n".as_bytes());
+                    {
+                        users.lock().unwrap().set_busy_false(name.clone()) ;
+                    }
+                    continue;
                 }
             }
             else{
                 stream_loop2.write("please enter valid response\n".as_bytes());
+                 {
+                     users.lock().unwrap().set_busy_false(name.clone()) ;
+                 }
                 continue;
             }
         {
@@ -384,7 +395,7 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
         loop {
             let mut temp = false;
             {
-                let temp = quit_flag_thread1.lock().unwrap().get();
+                temp = quit_flag_thread1.lock().unwrap().get() ;
             }
             if temp {
                 break ;
@@ -397,10 +408,15 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
 
             if my_string == "QUIT".to_string() {
                     quit_flag_thread1.lock().unwrap().set() ;
-                    //my_string = name_2.clone() + " has left \n";
-                    //stream1_3.write(my_string.as_bytes());
                     break ;
-                }
+            }
+            let mut temp = false;
+            {
+                temp = quit_flag_thread1.lock().unwrap().get() ;
+            }
+            if temp {
+                break ;
+            }
             my_string = name1.clone() + " : "+ &my_string + "\n";
             stream2_3.write(my_string.clone().as_bytes());
         }
@@ -411,7 +427,7 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
         loop {
             let mut temp = false;
             {
-                let temp = quit_flag_thread2.lock().unwrap().get();
+                temp = quit_flag_thread2.lock().unwrap().get() ;
             }
             if temp {
                 break ;
@@ -421,15 +437,16 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
             read_method.read_line(&mut my_string) ;
             my_string.pop();
             my_string.pop();
-            let mut temp = false;
-            {
-                let temp = quit_flag_thread2.lock().unwrap().get();
-            }
             if my_string == "QUIT".to_string(){
                     quit_flag_thread2.lock().unwrap().set() ;
-                    //my_string = name_2.clone() + " has left \n";
-                    //stream1_3.write(my_string.as_bytes());
                     break ;
+            }
+            let mut temp = false;
+            {
+                temp = quit_flag_thread2.lock().unwrap().get() ;
+            }
+            if temp {
+                break ;
             }
             my_string = name2.clone() + " : "+ &my_string + "\n";
             stream1_3.write(my_string.clone().as_bytes());
