@@ -31,6 +31,7 @@ default default
 ////////owen
  123
  SiranLiu
+<<<<<<< HEAD
 ////////SiranLiu
  Lanqiu28
  owen
@@ -42,3 +43,9 @@ default default
  owen
  test
  l
+=======
+////////owen
+ 123
+ SiranLiu
+ test
+>>>>>>> origin/master
