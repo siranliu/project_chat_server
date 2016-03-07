@@ -188,7 +188,7 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                 read_method.read_line(&mut my_string) ;
                 let mut flag = false;
                 {
-                    flag = users.lock().unwrap().contains_user(name.clone());
+                    flag = users.lock().unwrap().contains_user(my_string.clone());
                 }
                 if flag{
                     users.lock().unwrap().add_friend(name.clone() , my_string.clone());
@@ -461,7 +461,7 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
                 break ;
             }
             my_string = name1.clone() + " : "+ &my_string + "\n";
-            stream2_3.write(my_string.clone().as_bytes());
+            stream2_3.write(my_string.clone().as_bytes());                  // write to other users
         }
     });
 
@@ -489,7 +489,7 @@ fn user_chat_loop (mut stream1 : TcpStream , mut stream2 : TcpStream , name1 : S
                 break ;
             }
             my_string = name2.clone() + " : "+ &my_string + "\n";
-            stream1_3.write(my_string.clone().as_bytes());
+            stream1_3.write(my_string.clone().as_bytes());             //Recieving from other user
         }
     });
 }
@@ -524,7 +524,7 @@ fn handle_client(mut stream : TcpStream ,sender : chan :: Sender<String> ,
         let quit_flag_thread2 = quit_flag.clone();
         let group_chat1 = group_chat.clone() ;
 
-        thread:: spawn(move || {
+        thread:: spawn(move || {              // Recieving from group chat
             loop{
                 if quit_flag_thread1.lock().unwrap().get(){
                     group_chat1.lock().unwrap().remove_member(chat_name.clone() , name2);
@@ -541,7 +541,7 @@ fn handle_client(mut stream : TcpStream ,sender : chan :: Sender<String> ,
             }
         });
 
-        thread:: spawn(move || {
+        thread:: spawn(move || {                 //send to group chat
             loop {
                 let mut read_method = BufReader::new(&clone_stream2) ;
                 let mut my_string = String :: new() ;
