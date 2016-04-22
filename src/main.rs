@@ -355,8 +355,7 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
 
                     join_group_chat(stream_loop2 , my_string.clone() , group_chat2 , name.clone() , quit_flag2);
 
-                    let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone() + &",type in 'QUIT' to quit to 
-                    go back to lobby".to_string();
+                    let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone() + &",type in 'QUIT' to quit to go back to lobby\n".to_string();
                     stream_loop3.write(chat_reminder.as_bytes());
                     while quit_flag.lock().unwrap().get() == false {}
                     {
@@ -391,8 +390,7 @@ fn user_loop (mut stream : TcpStream  ,group_chat : Arc<Mutex<Group_chat>> , nam
                     let quit_flag2 = quit_flag.clone();
 
                     join_group_chat(stream_loop2 , my_string.clone() , group_chat , name.clone() , quit_flag2);
-                    let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone() + &",type in 'QUIT' to quit to 
-                    go back to lobby".to_string();
+                    let chat_reminder : String = "Now you are in Chatroom ".to_string() + &my_string.clone() + &",type in 'QUIT' to quit to go back to lobby\n".to_string();
                     stream_loop3.write(chat_reminder.as_bytes());
                     while quit_flag.lock().unwrap().get() == false{}
                     {
